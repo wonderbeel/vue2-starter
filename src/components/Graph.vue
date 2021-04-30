@@ -3,16 +3,46 @@
 </template>
 
 <script>
-import bb, { area, areaSpline } from 'billboard.js';
+import bb, { areaSpline } from 'billboard.js';
+
+const isDatasetItem = (item) => typeof item === 'object'
+    && typeof item.date === 'string'
+    && typeof item.performance === 'number';
+const validDataset = (dataset) => dataset.every(isDatasetItem);
 
 export default {
   props: {
-    columns: {
+    dataset: {
       type: Array,
       required: true,
-      validator(value) {
-        return value.every(Array.isArray);
+      validator(dataset) {
+        return Array.isArray(dataset) && validDataset(dataset);
       },
+    },
+  },
+  data() {
+    return {
+      graph: null,
+    };
+  },
+  watch: {
+    graphData: {
+      deep: true,
+      handler() {
+        this.updateGraph();
+      },
+    },
+  },
+  computed: {
+    graphData() {
+      return {
+        json: this.dataset,
+        keys: {
+          x: 'date',
+          value: ['performance'],
+        },
+        type: areaSpline(),
+      };
     },
   },
   mounted() {
@@ -20,16 +50,19 @@ export default {
   },
   methods: {
     drawGraph() {
-      bb.generate({
-        data: {
-          columns: this.columns,
-          types: {
-            data1: area(),
-            data2: areaSpline(),
+      this.graph = bb.generate({
+        data: this.graphData,
+        axis: {
+          x: {
+            show: true,
+            type: 'timeseries',
           },
         },
         bindto: this.$refs.graph,
       });
+    },
+    updateGraph() {
+      this.graph.load(this.graphData);
     },
   },
 };
